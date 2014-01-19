@@ -1,4 +1,13 @@
 fluent-plugin-gcm
 =================
 
-this is fluentd plugn what send message for gcm.
+アウトプットプラグインとして動作し、GCMへメッセージを送ります。
+
+結果についてはエラーが発生した場合のみ、タグ名 + .gcm.result というタグ名で再度 emit します。
+
+TODO: 入出力仕様
+--------------------
+
+- 入力フォーマット
+- 結果フォーマット
+
