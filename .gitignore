@@ -1,11 +1,19 @@
-# Build and Release Folders
-bin/
-bin-debug/
-bin-release/
+*.swp
+*.bak
+.DS_Store
 
-# Other files and folders
-.settings/
+*.gem
+*.rbc
+/.config
+/coverage/
+/InstalledFiles
+/pkg/
+/spec/reports/
+/test/tmp/
+/test/version_tmp/
+/tmp/
+/.bundle/
+/lib/bundler/man/
+/vendor/bundle/*
+.rvmrc
 
-# Project files, i.e. `.project`, `.actionScriptProperties` and `.flexProperties`
-# should NOT be excluded as they contain compiler settings and other important
-# information for Eclipse / Flash Builder.
