@@ -20,7 +20,6 @@ class Fluent::GcmOutput < Fluent::BufferedOutput
     require 'msgpack'
     require 'gcm'
     require File.dirname(__FILE__) + '/gcm/gcm_util'
-    @gcm_util = GcmUtil.new
   end
 
   def configure(conf)
@@ -31,6 +30,7 @@ class Fluent::GcmOutput < Fluent::BufferedOutput
 
   def start
     super
+    @gcm_util = GcmUtil.new
     @gcm_client = GCM.new(@api_key)
   end
 
@@ -49,8 +49,8 @@ class Fluent::GcmOutput < Fluent::BufferedOutput
   end
 
   def write(chunk)
-    $log.info("write start!")
-    records = []
+    records_s = 0
+    records_f = 0
 
     chunk.msgpack_each do |records|
         unless @gcm_client
@@ -62,6 +62,7 @@ class Fluent::GcmOutput < Fluent::BufferedOutput
         begin 
             code, results, response = @gcm_util.send(@gcm_client, dests, msg)
         rescue => e
+            records_f += dests.size if dests
             transfer_record = { "status_code" => PLUGIN_ERROR, "app_name" => @app_name, "error" => e.to_s , "registration_id" => dests}.merge(x_headers)
             Fluent::Engine.emit(new_tag, time, transfer_record)
             $log.error(e)
@@ -71,17 +72,19 @@ class Fluent::GcmOutput < Fluent::BufferedOutput
         if code == SUCCESS
             results.each do | id , result |
                 if error_object = @gcm_util.build_error_message(@app_name, id, x_headers, result)
+                    records_f+=1
                     Fluent::Engine.emit(new_tag, time, error_object)
                 else
-                    records << id
+                    records_s+=1
                 end
             end
         else
+            records_f += dests.size if dests
             transfer_record = { "status_code" => code, "app_name" => @app_name, "error" => response, "registration_id" => dests}.merge(x_headers)
             Fluent::Engine.emit(new_tag, time, transfer_record)
         end
     end
-    records
+    $log.debug("[gcm_summary] app:#{@app_name}; success:#{records_s}; failure:#{records_f}")
   end
 end
 
