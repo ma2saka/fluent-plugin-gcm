@@ -214,4 +214,54 @@ class GcmUtilTest < Test::Unit::TestCase
     assert_equal 'response is empty.', results[2]
   end
 
+  def test_build_error_no_error
+    c = client
+    g = driver
+
+    result = g.build_error_message("return of the jedi", 
+                                    "yoda", 
+                                    {"x-gcm-title" => "3"},
+                                    {"registration_id" => "yoda"}
+                                   )
+
+    assert_equal nil,  result
+  end
+
+  def test_build_error_with_error1
+    c = client
+    g = driver
+
+    result = g.build_error_message("return of the jedi", 
+                                    "yoda", 
+                                    {"x-gcm-title" => "3"},
+                                    {"error" => "yes we can"}
+                                   )
+
+    assert_equal Hash,  result.class
+    assert_equal "return of the jedi",  result["app_name"]
+    assert_equal 200,  result["status_code"]
+    assert_equal "3",  result["x-gcm-title"]
+    assert_equal "yes we can",  result["error"]
+    assert_equal "yoda",  result["registration_id"]
+    assert_equal "yoda",  result["sent_registration_id"]
+  end
+
+  def test_build_error_with_cannonical
+    c = client
+    g = driver
+
+    result = g.build_error_message("return of the jedi", 
+                                    "yoda", 
+                                    {"x-gcm-title" => "3"},
+                                    {"registration_id" => "new yoda"}
+                                   )
+
+    assert_equal Hash,  result.class
+    assert_equal "return of the jedi",  result["app_name"]
+    assert_equal 200,  result["status_code"]
+    assert_equal "3",  result["x-gcm-title"]
+    assert_equal "HasCannonicalId",  result["error"]
+    assert_equal "new yoda",  result["registration_id"]
+    assert_equal "yoda",  result["sent_registration_id"]
+  end
 end

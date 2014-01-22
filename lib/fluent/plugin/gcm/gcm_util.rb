@@ -1,5 +1,6 @@
 module Fluent
     class GcmOutput::GcmUtil
+        SUCCESS = 200
         def unpack(record)
             dests = [ record['registration_id'] ].flatten
             dests.compact!
@@ -35,10 +36,21 @@ module Fluent
         def build_error_message(app_name, id, x_headers, result)
             app_name ||= 'Unknown App'
             
+            if result.class == Hash
+                if result['registration_id']
+                    if not result['registration_id'] == id
+                        result['error'] = 'HasCannonicalId'
+                    end
+                else
+                  result['registration_id'] = id
+                end
+                result['sent_registration_id'] = id
+            end
+
             if id && result['error']
-                result["status_code"] = 200
+                result["status_code"] = SUCCESS
                 result['app_name'] = app_name
-                result['registration_id'] = id
+
                 if x_headers && x_headers.size > 0
                     result.merge!(x_headers)
                 end
