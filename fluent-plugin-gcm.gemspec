@@ -4,9 +4,9 @@ $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 
 Gem::Specification.new do |spec|
   spec.name          = "fluent-plugin-gcm"
-  spec.version       = "0.0.2"
+  spec.version       = "0.0.3"
   spec.authors       = ["ma2saka"]
-  spec.email         = [""]
+  spec.email         = ["takashi.matsusaka@me.com"]
   spec.description   = %q{fluent plugin, send message for gcm. }
   spec.summary       = %q{fluent plugin, send message for gcm. }
   spec.homepage      = ""

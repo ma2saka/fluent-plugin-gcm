@@ -3,11 +3,11 @@ class Fluent::GcmOutput < Fluent::BufferedOutput
   PLUGIN_ERROR=999
 
   Fluent::Plugin.register_output('gcm', self)
-
-  attr_accessor :gcm_client
   
   config_param :api_key, :string
   config_param :app_name, :string
+  config_param :result_tag_prefix, :string, :default => nil
+  config_param :result_tag_suffix, :string, :default => '.gcm.result'
 
   include Fluent::SetTagKeyMixin
   config_set_default :include_tag_key, false
@@ -24,8 +24,6 @@ class Fluent::GcmOutput < Fluent::BufferedOutput
 
   def configure(conf)
     super
-    @api_key = conf['api_key']
-    @app_name = conf['app_name']
   end
 
   def start
@@ -36,8 +34,6 @@ class Fluent::GcmOutput < Fluent::BufferedOutput
 
   def shutdown
     super
-    @gcm_util = nil
-    @gcm_client = nil
   end
 
   def format(tag, time, record)
@@ -45,7 +41,7 @@ class Fluent::GcmOutput < Fluent::BufferedOutput
   end
 
   def format_result_tag(tag)
-    "#{tag}.gcm.result"
+    "#{@result_tag_prefix}#{tag}#{@result_tag_suffix}"
   end
 
   def write(chunk)
@@ -53,17 +49,18 @@ class Fluent::GcmOutput < Fluent::BufferedOutput
     records_f = 0
 
     chunk.msgpack_each do |records|
-        unless @gcm_client
-            next
-        end
         tag, time, record = records
         new_tag = format_result_tag(tag)
         dests, x_headers, msg = @gcm_util.unpack(record)
+
         begin 
             code, results, response = @gcm_util.send(@gcm_client, dests, msg)
         rescue => e
             records_f += dests.size if dests
-            transfer_record = { "status_code" => PLUGIN_ERROR, "app_name" => @app_name, "error" => e.to_s , "registration_id" => dests}.merge(x_headers)
+            transfer_record = { "status_code" => PLUGIN_ERROR, 
+                                "app_name" => @app_name, 
+                                "error" => e.to_s , 
+                                "registration_id" => dests}.merge(x_headers)
             Fluent::Engine.emit(new_tag, time, transfer_record)
             $log.error(e)
             next
@@ -80,7 +77,10 @@ class Fluent::GcmOutput < Fluent::BufferedOutput
             end
         else
             records_f += dests.size if dests
-            transfer_record = { "status_code" => code, "app_name" => @app_name, "error" => response, "registration_id" => dests}.merge(x_headers)
+            transfer_record = { "status_code" => code, 
+                                "app_name" => @app_name, 
+                                "error" => response, 
+                                "registration_id" => dests}.merge(x_headers)
             Fluent::Engine.emit(new_tag, time, transfer_record)
         end
     end

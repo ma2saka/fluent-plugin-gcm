@@ -13,13 +13,27 @@ class GcmOutputTest < Test::Unit::TestCase
     Fluent::Test::BufferedOutputTestDriver.new(Fluent::GcmOutput, tag).configure(conf)
   end
 
-  def test_configure_with_params
+  def test_configure_with_all_params
     d = create_driver %[
         api_key Gray
         app_name SoldierQueey
+        result_tag_suffix .hello
+        result_tag_prefix yahoo.
     ]
     assert_equal 'Gray' , d.instance.api_key
     assert_equal 'SoldierQueey' , d.instance.app_name
+    assert_equal '.hello' , d.instance.result_tag_suffix
+    assert_equal 'yahoo.' , d.instance.result_tag_prefix
+  end
+  def test_configure_with_require_params
+    d = create_driver %[
+        api_key Gray
+        app_name Roza
+    ]
+    assert_equal 'Gray' , d.instance.api_key
+    assert_equal 'Roza' , d.instance.app_name
+    assert_equal '.gcm.result' , d.instance.result_tag_suffix
+    assert_equal nil , d.instance.result_tag_prefix
   end
 
   def test_configure_without_params
@@ -77,6 +91,7 @@ class GcmOutputTest < Test::Unit::TestCase
     d = create_driver %[
         api_key Marry
         app_name JumpingJackFlash
+        result_tag_suffix .result
     ]
 
     any_instance_of(::Fluent::GcmOutput::GcmUtil) do |k|
@@ -86,7 +101,7 @@ class GcmOutputTest < Test::Unit::TestCase
     end
     
     mock(Fluent::Engine).emit.with_any_args{|*args|
-        assert_equal 'test.test.gcm.result', args[0]
+        assert_equal 'test.test.result', args[0]
         assert_equal Fixnum, args[1].class
         assert_equal 200, args[2]["status_code"]
         assert_equal "death star", args[2]["error"]
@@ -95,7 +110,7 @@ class GcmOutputTest < Test::Unit::TestCase
     }
 
     mock(Fluent::Engine).emit.with_any_args{|*args|
-        assert_equal 'test.test.gcm.result', args[0]
+        assert_equal 'test.test.result', args[0]
         assert_equal Fixnum, args[1].class
         assert_equal 200, args[2]["status_code"]
         assert_equal "x wing", args[2]["error"]
@@ -142,6 +157,7 @@ class GcmOutputTest < Test::Unit::TestCase
     d = create_driver %[
         api_key Marry
         app_name JumpingJackFlash
+        result_tag_prefix sonorama.
     ]
 
     any_instance_of(::Fluent::GcmOutput::GcmUtil) do |k|
@@ -152,7 +168,7 @@ class GcmOutputTest < Test::Unit::TestCase
     end
     
     mock(Fluent::Engine).emit.with_any_args{|*args|
-        assert_equal 'test.test.gcm.result', args[0]
+        assert_equal 'sonorama.test.test.gcm.result', args[0]
         assert_equal Fixnum, args[1].class
         assert_equal 999, args[2]["status_code"]
         assert_equal String, args[2]["error"].class
@@ -172,6 +188,34 @@ class GcmOutputTest < Test::Unit::TestCase
     d = create_driver %[
         api_key Marry
         app_name JumpingJackFlash
+    ]
+
+    any_instance_of(::Fluent::GcmOutput::GcmUtil) do |k|
+      mock(k).send.with_any_args{|*args|
+        assert_equal GCM, args[0].class
+        assert_equal ["a", "b"] , args[1]
+        assert_equal Hash , args[2].class
+        assert_equal nil , args[2]["x-gcm-user"]
+        assert_equal "Use the force!" , args[2]["data"]["message"]
+
+        [ 200, { "a"=> "a_result" , "b" => "b_result"} , {} ]
+      }
+    end
+    
+    dont_allow(Fluent::Engine).emit
+
+    time = Time.parse("2011-01-02 13:14:15 UTC").to_i
+
+    d.emit({"x-gcm-user" => "c3po" ,"registration_id" => [ "a", "b"], "body" => { "data" => { "message" => "Use the force!" }}}, time)
+    d.run
+  end
+
+  def test_write_success_with_result_suffix_prefix
+    d = create_driver %[
+        api_key Marry
+        app_name JumpingJackFlash
+        result_tag_suffix .gcm
+        result_tag_prefix sonorama.
     ]
 
     any_instance_of(::Fluent::GcmOutput::GcmUtil) do |k|
